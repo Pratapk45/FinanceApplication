@@ -7,6 +7,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -136,5 +137,34 @@ public class AccountController {
                 );
 
         return ResponseEntity.ok(accounts);
+    }
+    
+    /**
+     * Closes an account without physically deleting it.
+     *
+     * This preserves the financial history associated
+     * with the account.
+     */
+    @PatchMapping("/{id}/close")
+    @Operation(
+            summary = "Close account",
+            description = """
+                    Closes an account when its balance is zero.
+                    The account is not physically deleted.
+                    """
+    )
+    public ResponseEntity<AccountResponseDTO> closeAccount(
+            @Parameter(description = "Account ID")
+            @PathVariable Long id) {
+
+        log.info(
+                "Close account request received. accountId={}",
+                id
+        );
+
+        AccountResponseDTO response =
+                accountService.closeAccount(id);
+
+        return ResponseEntity.ok(response);
     }
 }

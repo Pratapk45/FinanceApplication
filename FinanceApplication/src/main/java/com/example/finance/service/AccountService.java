@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.finance.entity.Account;
 import com.example.finance.entity.AccountStatus;
 import com.example.finance.entity.Customer;
+import com.example.finance.exception.AccountBusinessException;
 import com.example.finance.exception.AccountNotFoundException;
 import com.example.finance.exception.CustomerNotFoundException;
 import com.example.finance.mapper.AccountMapper;
@@ -115,7 +116,9 @@ public class AccountService {
 
 			log.warn("Update rejected because account is closed. accountId={}", account.getId());
 
-			throw new IllegalStateException("Closed account cannot be updated");
+			throw new AccountBusinessException(
+			        "Closed account cannot be updated"
+			);
 		}
 
 		/*
@@ -197,5 +200,74 @@ public class AccountService {
 		} while (accountRepository.existsByAccountNumber(accountNumber));
 
 		return accountNumber;
+	}
+	
+	/**
+	 * Closes an account.
+	 *
+	 * An account can be closed only when:
+	 * - the account exists
+	 * - the account is not already closed
+	 * - the account balance is zero
+	 *
+	 * We do not physically delete the account because
+	 * financial history must remain available.
+	 */
+	@Transactional
+	public AccountResponseDTO closeAccount(Long accountId) {
+
+	    log.info(
+	            "Close account request received. accountId={}",
+	            accountId
+	    );
+
+	    Account account = accountRepository.findById(accountId)
+	            .orElseThrow(() -> {
+	                log.warn(
+	                        "Account not found for closing. accountId={}",
+	                        accountId
+	                );
+
+	                return new AccountNotFoundException(accountId);
+	            });
+
+	    if (account.getStatus() == AccountStatus.CLOSED) {
+
+	        log.warn(
+	                "Account is already closed. accountId={}",
+	                accountId
+	        );
+
+	        throw new AccountBusinessException(
+	                "Account is already closed"
+	        );
+	    }
+
+	    if (account.getBalance() != null
+	            && account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
+
+	        log.warn(
+	                "Account cannot be closed because balance is not zero. accountId={}, balance={}",
+	                accountId,
+	                account.getBalance()
+	        );
+
+	        throw new AccountBusinessException(
+	                "Account cannot be closed while the balance is not zero"
+	        );
+	    }
+
+	    account.setStatus(AccountStatus.CLOSED);
+
+	    Account closedAccount =
+	            accountRepository.save(account);
+
+	    log.info(
+	            "Account closed successfully. accountId={}, accountNumber={}",
+	            closedAccount.getId(),
+	            closedAccount.getAccountNumber()
+	    );
+
+	    return accountMapper.toResponseDTO(closedAccount);
 	}
 }

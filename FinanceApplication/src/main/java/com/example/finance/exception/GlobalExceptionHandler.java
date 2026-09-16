@@ -118,6 +118,25 @@ public class GlobalExceptionHandler {
 
 		return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI(), null);
 	}
+	
+	@ExceptionHandler(AccountBusinessException.class)
+	public ResponseEntity<ErrorResponse> handleAccountBusinessException(
+	        AccountBusinessException ex,
+	        HttpServletRequest request) {
+
+	    log.warn(
+	            "Account business rule violation. path={}, message={}",
+	            request.getRequestURI(),
+	            ex.getMessage()
+	    );
+
+	    return buildErrorResponse(
+	            HttpStatus.BAD_REQUEST,
+	            ex.getMessage(),
+	            request.getRequestURI(),
+	            null
+	    );
+	}
 
 	// ============================================================
 	// LOAN EXCEPTIONS
